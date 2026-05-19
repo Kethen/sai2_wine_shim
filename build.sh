@@ -2,8 +2,8 @@ set -xe
 
 mkdir -p x64
 #mkdir -p x86
-x86_64-w64-mingw32-gcc -Wformat -fPIC -static -shared -Iminhook_prebuilt/include main.c -Lminhook_prebuilt/bin/ -Wl,-Bdynamic -lMinHook.x64 -lws2_32 -o x64/rpcrt4_.dll
-#i686-w64-mingw32-gcc -Wformat -fPIC -static -shared -Iminhook_prebuilt/include main.c -Lminhook_prebuilt/bin/ -Wl,-Bdynamic -lMinHook.x86 -lws2_32 -o x86/rpcrt4_.dll
+x86_64-w64-mingw32-gcc -Wformat -fPIC -static -shared -Iminhook_prebuilt/include main.c -Lminhook_prebuilt/bin/ -Wl,-Bdynamic -lMinHook.x64 -lws2_32 -o x64/wintab32.dll
+i686-w64-mingw32-gcc -Wformat -fPIC -static -shared -Iminhook_prebuilt/include main.c -Lminhook_prebuilt/bin/ -Wl,-Bdynamic -lMinHook.x86 -lws2_32 -o x86/wintab32.dll
 
 cp minhook_prebuilt/bin/MinHook.x64.dll ./x64
-#cp minhook_prebuilt/bin/MinHook.x86.dll ./x86
+cp minhook_prebuilt/bin/MinHook.x86.dll ./x86

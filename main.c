@@ -84,40 +84,124 @@ static void INIT_LOG(){
 	LOG("%s: hooked %s\n", __func__, STR(name)); \
 }
 
-#if 0
-static long int (*UuidCreate_orig)(GUID *uuid);
-#endif
+#define REDIRECT(name, ret_type, arg, call) \
+	static ret_type (*name##_orig) arg = NULL; \
+	ret_type name arg { return name##_orig call; }
 
-long int UuidCreate(GUID *uuid){
-	#if 0
-	return UuidCreate_orig(Uuid);
-	#endif
+REDIRECT(WTInfoA, UINT WINAPI, (UINT a, UINT b, LPVOID c), (a, b, c))
+REDIRECT(WTInfoW, UINT WINAPI, (UINT a, UINT b, LPVOID c), (a, b, c))
+REDIRECT(WTOpenA, HANDLE WINAPI, (void *a, void *b, BOOL c), (a, b, c))
+REDIRECT(WTOpenW, HANDLE WINAPI, (void *a, void *b, BOOL c), (a, b, c))
+REDIRECT(WTClose, BOOL WINAPI, (HANDLE a), (a))
+REDIRECT(WTPacketsGet, int WINAPI, (HANDLE a, int b, LPVOID c), (a, b, c))
+REDIRECT(WTPacket, BOOL WINAPI, (HANDLE a, UINT b, LPVOID c), (a, b, c))
+REDIRECT(WTEnable, BOOL WINAPI, (HANDLE a, BOOL b), (a, b))
+REDIRECT(WTOverlap, BOOL WINAPI, (HANDLE a, BOOL b), (a, b))
+REDIRECT(WTConfig, BOOL WINAPI, (HANDLE a, HANDLE b), (a, b))
+REDIRECT(WTGetA, BOOL WINAPI, (HANDLE a, void *b), (a, b))
+REDIRECT(WTGetW, BOOL WINAPI, (HANDLE a, void *b), (a, b))
+REDIRECT(WTSetA, BOOL WINAPI, (HANDLE a, void *b), (a, b))
+REDIRECT(WTSetW, BOOL WINAPI, (HANDLE a, void *b), (a, b))
+REDIRECT(WTExtGet, BOOL WINAPI, (HANDLE a, UINT b, void *c), (a, b, c))
+REDIRECT(WTExtSet, BOOL WINAPI, (HANDLE a, UINT b, void *c), (a, b, c))
+REDIRECT(WTSave, BOOL WINAPI, (HANDLE a, LPVOID b), (a, b))
+REDIRECT(WTRestore, HANDLE WINAPI, (HANDLE a, LPVOID b, BOOL c), (a, b, c))
+REDIRECT(WTPacketsPeek, int WINAPI, (HANDLE a, int b, LPVOID c), (a, b, c))
+REDIRECT(WTDataGet, int WINAPI, (HANDLE a, UINT b, UINT c, int d, LPVOID e, LPINT f), (a, b, c, d, e, f))
+REDIRECT(WTDataPeek, int WINAPI, (HANDLE a, UINT b, UINT c, int d, LPVOID e, LPINT f), (a, b, c, d, e, f))
+REDIRECT(WTQueueSizeGet, int WINAPI, (HANDLE a), (a))
+REDIRECT(WTQueueSizeSet, BOOL WINAPI, (HANDLE a, int b), (a, b))
+REDIRECT(WTMgrOpen, HANDLE WINAPI, (HANDLE a, UINT b), (a, b))
+REDIRECT(WTMgrClose, BOOL WINAPI, (HANDLE a), (a))
+REDIRECT(WTMgrContextEnum, BOOL WINAPI, (HANDLE a, void *b, void *c), (a, b, c))
+REDIRECT(WTMgrContextOwner, HANDLE WINAPI, (HANDLE a, HANDLE b), (a, b))
+REDIRECT(WTMgrDefContext, HANDLE WINAPI, (HANDLE a, BOOL b), (a, b))
+REDIRECT(WTMgrDefContextEx, HANDLE WINAPI, (HANDLE a, UINT b, BOOL c), (a, b, c))
+REDIRECT(WTMgrDeviceConfig, UINT WINAPI, (HANDLE a, UINT b, HANDLE c), (a, b, c))
+REDIRECT(WTMgrExt, BOOL WINAPI, (HANDLE a, UINT b, LPVOID c), (a, b, c))
+REDIRECT(WTMgrCsrEnable, BOOL WINAPI, (HANDLE a, UINT b, BOOL c), (a, b, c))
+REDIRECT(WTMgrCsrButtonMap, BOOL WINAPI, (HANDLE a, UINT b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrCsrPressureBtnMarks, BOOL WINAPI, (HANDLE a, UINT b, DWORD c, DWORD d), (a, b, c, d))
+REDIRECT(WTMgrCsrPressureResponse, BOOL WINAPI, (HANDLE a, UINT b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrCsrExt, BOOL WINAPI, (HANDLE a, UINT b, UINT c, LPVOID d), (a, b, c, d))
+REDIRECT(WTQueuePacketsEx, BOOL WINAPI, (HANDLE a, void *b, void *c), (a, b, c))
+REDIRECT(WTMgrConfigReplaceExA, BOOL WINAPI, (HANDLE a, BOOL b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrConfigReplaceExW, BOOL WINAPI, (HANDLE a, BOOL b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrPacketHookExA, HANDLE WINAPI, (HANDLE a, int b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrPacketHookExW, HANDLE WINAPI, (HANDLE a, int b, void *c, void *d), (a, b, c, d))
+REDIRECT(WTMgrPacketUnhook, BOOL WINAPI, (HANDLE a), (a))
+REDIRECT(WTMgrPacketHookNext, void * WINAPI, (HANDLE a, int b, WPARAM c, void *d), (a, b, c, d))
+REDIRECT(WTMgrCsrPressureBtnMarksEx, BOOL WINAPI, (HANDLE a, UINT b, void *c, void *d), (a, b, c, d))
 
-	FILE *random_dev = fopen("/dev/random", "rb");
-	if (random_dev == NULL){
-		LOG("%s: failed opening /dev/random, 0x%x\n", __func__, GetLastError());
-		exit(1);
-	}
 
-	int count = fread(uuid, sizeof(GUID), 1, random_dev);
-	if (count != 1){
-		LOG("%s: failed reading from random dev, 0x%x\n", __func__, GetLastError());
-		exit(1);
-	}
-
-	fclose(random_dev);
-	
-	return ERROR_SUCCESS;
+#define FETCH_REDIRECT_WIN(module, name) { \
+	char win_dir[1024] = {0}; \
+	GetWindowsDirectoryA(win_dir, sizeof(win_dir)); \
+	char lib_path[1024] = {0}; \
+	sprintf(lib_path, "%s\\system32\\%s", win_dir, module); \
+	HANDLE lib_handle = LoadLibraryA(lib_path); \
+	if (lib_handle == NULL) { \
+		LOG("%s: failed loading %s, 0x%x\n", __func__, lib_path, GetLastError()); \
+		sprintf(lib_path, "%s\\syswow64\\%s", win_dir, module); \
+		lib_handle = LoadLibraryA(lib_path); \
+	} \
+	if (lib_handle == NULL){ \
+		LOG("%s: failed fetching handle of %s for %s, 0x%x\n", __func__, module, STR(name), GetLastError()); \
+		exit(1); \
+	} \
+	name##_orig = (void *)GetProcAddress(lib_handle, STR(name)); \
+	if (name##_orig == NULL){ \
+		LOG("%s: failed fetching %s from %s\n", __func__, STR(name), module); \
+		exit(1); \
+	} \
+	LOG("%s: fetched %s from %s\n", __func__, STR(name), lib_path); \
 }
 
-void self_test(){
-	GUID test_uuid = {0};
-	UuidCreate(&test_uuid);
-	LOG("%s: generated uuid: ", __func__);
-	for(int i = 0;i < sizeof(test_uuid);i++){
-		LOG("%02x", (uint32_t)((uint8_t*)&test_uuid)[i]);
-	}
-	LOG("\n");
+void load_wintab_redirects(){
+	FETCH_REDIRECT_WIN("wintab32.dll", WTInfoA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTOpenA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTClose);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTPacketsGet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTPacket);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTEnable);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTOverlap);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTConfig);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTGetA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTSetA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTExtGet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTExtSet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTSave);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTRestore);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTPacketsPeek);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTDataGet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTDataPeek);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTQueueSizeGet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTQueueSizeSet);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrOpen);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrClose);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrContextEnum);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrContextOwner);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrDefContext);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrDeviceConfig);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrExt);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrEnable);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrButtonMap);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrPressureBtnMarks);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrPressureResponse);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrExt);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTQueuePacketsEx);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrCsrPressureBtnMarksEx);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrConfigReplaceExA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrPacketHookExA);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrPacketUnhook);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrPacketHookNext);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrDefContextEx);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTInfoW);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTOpenW);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTGetW);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTSetW);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrConfigReplaceExW);
+	FETCH_REDIRECT_WIN("wintab32.dll", WTMgrPacketHookExW);
 }
 
 void init_minhook(){
@@ -130,7 +214,7 @@ void init_minhook(){
 	LOG("%s: minhook initialized\n", __func__);
 }
 
-NTSTATUS NTAPI (*NtSetInformationFile_orig)(HANDLE hFile,PIO_STATUS_BLOCK io,PVOID ptr,ULONG len,FILE_INFORMATION_CLASS FileInformationClass) = NULL;
+static NTSTATUS NTAPI (*NtSetInformationFile_orig)(HANDLE hFile,PIO_STATUS_BLOCK io,PVOID ptr,ULONG len,FILE_INFORMATION_CLASS FileInformationClass) = NULL;
 NTSTATUS NTAPI NtSetInformationFile_hooked(HANDLE hFile,PIO_STATUS_BLOCK io,PVOID ptr,ULONG len,FILE_INFORMATION_CLASS FileInformationClass){
 	FILE_RENAME_INFORMATION *rename_info_orig = ptr;
 
@@ -171,6 +255,9 @@ NTSTATUS NTAPI NtSetInformationFile_hooked(HANDLE hFile,PIO_STATUS_BLOCK io,PVOI
 
 	NTSTATUS status =  NtSetInformationFile_orig(hFile, io, rename_info_new, sizeof(rename_info_new_buffer), FileInformationClass);
 	LOG("%s: returing 0x%x\n", __func__, status);
+
+	//asm("int $3");
+
 	return status;
 }
 
@@ -189,27 +276,7 @@ __attribute__((constructor))
 int init(){
 	INIT_LOG();
 
-	#if 0
-	const char lib_name[] = "rpcrt4.dll";
-	char win_dir[1024] = {0};
-	GetWindowsDirectoryA(win_dir, sizeof(win_dir));
-	char lib_path[1024] = {0};
-	sprintf(lib_path, "%s\\system32\\%s", win_dir, lib_name);
-	HANDLE lib_handle = LoadLibraryA(lib_path);
-	if (lib_handle == NULL){
-		LOG("%s: failed loading %s, 0x%x\n", __func__, lib_path, GetLastError());
-		sprintf(lib_path, "%s\\syswow64\\%s", win_dir, lib_name);
-		lib_handle = LoadLibraryA(lib_path);
-	}
-	if (lib_handle == NULL){
-		LOG("%s: failed loading %s, 0x%x\n", __func__, lib_path, GetLastError());
-		exit(1);
-	}
-
-	UuidCreate_orig = (void *)GetProcAddress(lib_handle, "UuidCreate");
-	#endif
-
-	self_test();
+	load_wintab_redirects();
 	init_minhook();
 	hook_rename();
 
