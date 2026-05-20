@@ -21,7 +21,7 @@
 static void LOG(const char *fmt, ...){
 	FILE *log_file = fopen(LOG_PATH, "ab");
 
-	char log_buf[1024] = {0};
+	char log_buf[4096] = {0};
 
 	va_list args;
 	va_start(args, fmt);
