@@ -5,6 +5,7 @@
 #include <winerror.h>
 #include <winternl.h>
 #include <ntstatus.h>
+#include <fileapi.h>
 
 #include <stdlib.h>
 #include <stdio.h>
