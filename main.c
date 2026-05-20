@@ -4,6 +4,7 @@
 #include <guiddef.h>
 #include <winerror.h>
 #include <winternl.h>
+#include <ntstatus.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -231,7 +232,7 @@ NTSTATUS NTAPI NtSetInformationFile_hooked(HANDLE hFile,PIO_STATUS_BLOCK io,PVOI
 	wchar_t to_path[1024] = {0};
 	memcpy(to_path, rename_info_orig->FileName, rename_info_orig->FileNameLength);
 
-	GetFinalPathNameByHandleW(hFile, from_path, ARRAY_SIZE(from_path), VOLUME_NAME_NT);
+	GetFinalPathNameByHandleW(hFile, from_path, ARRAY_SIZE(from_path), VOLUME_NAME_DOS);
 	LOG("%s: moving %ls to %ls\n", __func__, from_path, to_path);
 
 	int final_slash_offset = 0;
@@ -244,6 +245,16 @@ NTSTATUS NTAPI NtSetInformationFile_hooked(HANDLE hFile,PIO_STATUS_BLOCK io,PVOI
 	memset(to_path, 0, sizeof(to_path));
 	memcpy(to_path, &from_path[trim], (final_slash_offset + 1 - trim) * 2);
 	memcpy(&to_path[final_slash_offset + 1 - trim], rename_info_orig->FileName, rename_info_orig->FileNameLength);
+
+	UNICODE_STRING nt_name;
+	BOOL nt_pathname_resolve_status = RtlDosPathNameToNtPathName_U(to_path, &nt_name, NULL, NULL);
+	if (!nt_pathname_resolve_status){
+		LOG("%s: RtlDosPathNameToNtPathName_U of %ls failed\n", __func__, to_path);
+	}else{
+		memset(to_path, 0, sizeof(to_path));
+		memcpy(to_path, nt_name.Buffer, nt_name.Length);
+	}
+	RtlFreeUnicodeString(&nt_name);
 
 	char rename_info_new_buffer[sizeof(FILE_RENAME_INFORMATION) + sizeof(to_path)] = {0};
 	FILE_RENAME_INFORMATION *rename_info_new = (void *)rename_info_new_buffer;
